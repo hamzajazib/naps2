@@ -7,8 +7,9 @@ namespace NAPS2.Sdk.Tests.Scan;
 
 public class SaneScanDriverOptionTests : ContextualTests
 {
-    private readonly SaneScanDriver _driver;
+    private const string LIBRARY_VERSION = "1.2.3";
 
+    private readonly SaneScanDriver _driver;
     public SaneScanDriverOptionTests()
     {
         _driver = new SaneScanDriver(ScanningContext);
@@ -90,7 +91,7 @@ public class SaneScanDriverOptionTests : ContextualTests
 
     [Fact]
     public void GetSaneCaps()
-    {
+    {        
         var device = new DeviceOptionsMock([
             SaneOption.CreateFixedForTesting(1, SaneOptionNames.TOP_LEFT_X,
                 new SaneRange { Min = 0, Max = 100, Quant = 1 }),
@@ -105,9 +106,10 @@ public class SaneScanDriverOptionTests : ContextualTests
             SaneOption.CreateStringListForTesting(7, SaneOptionNames.MODE, ["Gray", "Color"])
         ]);
 
-        var caps = _driver.GetSaneCaps(device, "pixma");
+        var caps = _driver.GetSaneCaps(device, "pixma", LIBRARY_VERSION);
 
         Assert.Equal("pixma", caps.MetadataCaps?.DriverSubtype);
+        Assert.Equal(LIBRARY_VERSION, caps.MetadataCaps?.ProtocolVersion);
         VerifyCapPaperSources(device, true, false, false);
         var flatbedCaps = caps.FlatbedCaps;
         Assert.NotNull(flatbedCaps);
@@ -118,6 +120,18 @@ public class SaneScanDriverOptionTests : ContextualTests
         Assert.Equal(true, flatbedCaps.BitDepthCaps?.SupportsColor);
         Assert.Equal(true, flatbedCaps.BitDepthCaps?.SupportsGrayscale);
         Assert.Equal(false, flatbedCaps.BitDepthCaps?.SupportsBlackAndWhite);
+    }
+
+    [Fact]
+    public void GetSaneCaps_LibraryVersion()
+    {
+        var device = new DeviceOptionsMock([
+            SaneOption.CreateStringListForTesting(1, SaneOptionNames.SOURCE, ["Flatbed"])
+        ]);
+
+        var caps = _driver.GetSaneCaps(device, "", LIBRARY_VERSION);
+
+        Assert.Equal(LIBRARY_VERSION, caps.MetadataCaps?.ProtocolVersion);
     }
 
     [Fact]
@@ -214,7 +228,7 @@ public class SaneScanDriverOptionTests : ContextualTests
 
     [Fact]
     public void SetOptions_DuplexWithPartialMatch()
-    {
+    {        
         var device = new DeviceOptionsMock([
             SaneOption.CreateStringListForTesting(1, SaneOptionNames.SOURCE,
                 ["Feeder(left aligned)", "Feeder(left aligned,Duplex)"])
@@ -230,7 +244,7 @@ public class SaneScanDriverOptionTests : ContextualTests
 
     [Fact]
     public void SetOptions_DuplexBoolean()
-    {
+    {        
         // Settings from Epson WF-3520 with epsonscan2 backend
         var device = new DeviceOptionsMock([
             SaneOption.CreateStringListForTesting(1, SaneOptionNames.SOURCE,
@@ -344,7 +358,7 @@ public class SaneScanDriverOptionTests : ContextualTests
 
     private void VerifyCapPaperSources(DeviceOptionsMock device, bool flatbed, bool feeder, bool duplex)
     {
-        var caps = _driver.GetSaneCaps(device, "");
+        var caps = _driver.GetSaneCaps(device, "", LIBRARY_VERSION);
         Assert.NotNull(caps.PaperSourceCaps);
         Assert.Equal(flatbed, caps.PaperSourceCaps.SupportsFlatbed);
         Assert.Equal(feeder, caps.PaperSourceCaps.SupportsFeeder);
